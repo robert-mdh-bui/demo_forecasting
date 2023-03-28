@@ -48,7 +48,7 @@ df_mice <- obj_mice %>% complete(1)
 df_mice
 ```
 
-```{r}
+```{r fig.height=4, fig.width=4}
 ts <- raw_ts %>% 
   transmute(
     y = y, 
@@ -74,7 +74,7 @@ ggplot_na_imputations(x_with_na = ts,
 ```
 
 
-```{r}
+```{r fig.height=4, fig.width=4}
 # Dotplot of imputed (red) vs real (blue) per year
 xyplot(obj_mice, y ~ Year, pch = 18, cex = 2)
 

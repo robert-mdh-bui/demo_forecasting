@@ -1,0 +1,92 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-03-28"
+---
+
+```{r include=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(zoo)
+library(Cairo)
+library(tsibble)
+library(fable)
+library(feasts)
+library(forecast)
+library(patchwork)
+```
+
+```{r}
+raw_ts <- 
+  read_csv("data/ts_dsea_kalman.csv", show_col_types = FALSE) %>%
+  transmute(y = `Incoming Examinations`,
+            datetime = paste(Year, Month, "01", sep = "-") %>% ymd())
+
+# tsibble ecosystem format
+tsib <- raw_ts %>% as_tsibble(index = datetime)
+
+# traditional ts format
+ts <- raw_ts %>% select(y) %>% 
+  ts(start = c(2006,1),
+     end   = c(2013,12),
+     frequency = 12)
+```
+
+```{r fig.height=5, fig.width=8}
+autoplot(tsib) +
+  theme_minimal()+ 
+  ylab("Retail index")+ 
+  xlab("Year")
+
+ts %>% ggtsdisplay()
+```
+
+```{r fig.height=5, fig.width=8}
+ts %>% diff(lag=12) %>% unitroot_kpss()
+ts %>% diff(lag=12) %>% ggtsdisplay()
+
+ts %>% diff(lag=12) %>% diff() %>% unitroot_kpss()
+ts %>% diff(lag=12) %>% diff() %>% ggtsdisplay()
+```
+
+```{r}
+# Fit Models
+
+set.seed(8675309)
+model1 <- ts %>% Arima(order = c(1,1,0), seasonal = c(1,1,0))
+model2 <- ts %>% Arima(order = c(11,1,0), seasonal = c(0,1,0))
+model3 <- ts %>% Arima(order = c(2,0,0), seasonal = c(1,1,0))
+
+model_auto <- ts %>% auto.arima(
+  D = 1,
+  stationary = FALSE,
+  seasonal = TRUE,
+  stepwise = FALSE
+)
+```
+
+```{r}
+# Model Summaries
+
+summary(model1)
+summary(model2)
+summary(model3)
+summary(model_auto)
+```
+
+```{r fig.height=4, fig.width=9.6}
+# Model Residual Check
+
+checkresiduals(model1)
+checkresiduals(model2)
+checkresiduals(model3)
+checkresiduals(model_auto)
+```
+
+```{r fig.height=4, fig.width=5}
+# Final candidate forecasts (24 months)
+model2     %>% forecast(h=24) %>% autoplot(ylim = c(0,12000)) 
+model_auto %>% forecast(h=24) %>% autoplot(ylim = c(0,12000))
+```
+

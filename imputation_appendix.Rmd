@@ -17,18 +17,7 @@ library(tsibble)
 library(fable)
 library(feasts)
 library(imputeTS)
-```
-
-```{r eval=FALSE, include=TRUE}
-library(tidyverse)
-library(tidymodels)
-library(lubridate)
-library(zoo)
-library(Cairo)
-library(tsibble)
-library(fable)
-library(feasts)
-library(imputeTS)
+library(patchwork)
 ```
 
 ```{r}
@@ -54,7 +43,7 @@ ts <- raw_ts %>% select(y) %>%
 print(ts)
 ```
 
-```{r}
+```{r fig.height=6, fig.width=8}
 # Summary Statistics of missing values
 statsNA(ts)
 
@@ -62,9 +51,29 @@ statsNA(ts)
 ggplot_na_distribution(ts)
 ```
 
-# Sanity Check: Is there seasonality?
+# Sanity Check: Is there stationarity? Is there seasonality? How many degrees of Differencing?
+## Stationarity
 
-```{r}
+```{r fig.height=5, fig.width=5}
+ts %>% 
+  na_locf() %>% 
+  acf(lag.max = length(ts),
+      #xlab = "Lag (months)",
+      main = "ACF")
+ 
+ts %>% 
+  na_locf() %>% 
+  diff() %>%
+  acf(lag.max = length(ts),
+      #xlab = "Lag (months)",
+      main = "pACF")
+
+Box.test(diff(ts),lag=12,type="Ljung-Box")
+```
+
+
+## Seasonality
+```{r fig.height=6, fig.width=9}
 # STL decomposition with basic quick imputed LOCF
 ts %>% 
   na_locf() %>% 
@@ -74,7 +83,7 @@ ts %>%
 
 # Basic Methods
 
-```{r}
+```{r fig.height=4, fig.width=4}
 # Last-Observation-Carried-Forward imputation
 ts_locf <-
   ts %>% na_locf(option = "locf",
@@ -85,7 +94,7 @@ ts_locf <-
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_locf,
-                      title = "Imputed Values w/ LOCF",
+                      title = "Last Observation Carried Forward",
                       theme = ggplot2::theme_minimal())
 
 # Next-Observation-Carried-Backward imputation
@@ -98,7 +107,7 @@ ts_nocb <-
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_nocb,
-                      title = "Imputed Values w/ NOCB",
+                      title = "Next Observation Carried Backwards",
                       theme = ggplot2::theme_minimal())
 
 # Linear Interpolation
@@ -108,14 +117,14 @@ ts_linear <-
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_linear,
-                      title = "Imputed Values w/ Linear Interp.",
+                      title = "Linear Interpolation",
                       theme = ggplot2::theme_minimal())
 
 ```
 
 # Intermediate Methods
 
-```{r}
+```{r fig.height=4, fig.width=6}
 # Stineman Interpolation
 ts_stineman <-
   ts %>% na_interpolation(option = "stine",
@@ -123,7 +132,7 @@ ts_stineman <-
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_stineman,
-                      title = "Imputed Values w/ Stineman Interp.",
+                      title = "Stineman Interpolation",
                       theme = ggplot2::theme_minimal())
 
 # Kalman filtering imputation
@@ -134,13 +143,13 @@ ts_kalman <-
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_kalman,
-                      title = "Imputed Values w/ Kalman filtering",
+                      title = "Kalman Filtering",
                       theme = ggplot2::theme_minimal())
 ```
 
 # Deseasonalised Methods
 
-```{r}
+```{r fig.height=4, fig.width=6}
 # Deseasonalised LOCF
 ts_dsea_locf <- ts %>% 
   na_seadec(algorithm = "locf",
@@ -148,7 +157,7 @@ ts_dsea_locf <- ts %>%
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_dsea_locf,
-                      title = "Imputed Values w/ Deseasonalised LOCF",
+                      title = "Deseasonalised LOCF",
                       theme = ggplot2::theme_minimal())
 
 # Deseasonalised linear interp
@@ -158,7 +167,7 @@ ts_dsea_linear <-ts %>%
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_dsea_linear,
-                      title = "Imputed Values w/ Deseasonalised Linear Interp.",
+                      title = "Deseasonalised Linear Interpolation",
                       theme = ggplot2::theme_minimal())
 
 # Deseasonalised Kalman filtering
@@ -168,7 +177,7 @@ ts_dsea_kalman <- ts %>%
 
 ggplot_na_imputations(x_with_na = ts,
                       x_with_imputations = ts_dsea_kalman,
-                      title = "Imputed Values w/ Deseasonalised Kalman filtering",
+                      title = "Deseasonalised Kalman Filtering",
                       theme = ggplot2::theme_minimal())
 
 ```
